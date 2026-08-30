@@ -15,5 +15,23 @@ export default defineConfig({
   server: {
     port: 5300,
     strictPort: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5350',
+        changeOrigin: true,
+      },
+      '/health': {
+        target: 'http://localhost:5350',
+        changeOrigin: true,
+      },
+      '/chat': {
+        target: 'http://localhost:5350',
+        changeOrigin: true,
+      },
+      '/upload': {
+        target: 'http://localhost:5350',
+        changeOrigin: true,
+      },
+    },
   },
 })
