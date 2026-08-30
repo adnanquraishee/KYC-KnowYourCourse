@@ -33,6 +33,7 @@ does NOT contain any key. It reads GROQ_API_KEY from your environment
 ------------------------------------------------------------------------
 """
 
+import io
 import json
 import os
 import re
@@ -97,6 +98,28 @@ def load_knowledge_base(pdf_path: str = PDF_PATH) -> List[Document]:
                 continue
             docs.append(Document(doc_id=f"page_{i:03d}", text=raw, metadata={"page": i}))
     return docs
+
+
+def load_knowledge_base_from_bytes(
+    file_bytes: bytes, filename: str = "custom_catalogue.pdf"
+) -> List[Document]:
+    """Reads PDF bytes in-memory for user uploads."""
+    docs: List[Document] = []
+    with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+        for i, page in enumerate(pdf.pages, start=1):
+            raw = page.extract_text() or ""
+            raw = raw.strip()
+            if not raw:
+                continue
+            docs.append(
+                Document(
+                    doc_id=f"page_{i:03d}",
+                    text=raw,
+                    metadata={"page": i, "filename": filename},
+                )
+            )
+    return docs
+
 
 
 # --------------------------------------------------------------------------
@@ -374,6 +397,15 @@ def build_store(pdf_path: str = PDF_PATH) -> VectorStore:
     store = VectorStore()
     store.build(chunks)
     print(f"Knowledge base ready: {len(docs)} pages -> {len(chunks)} chunks.")
+    return store
+
+
+def build_store_from_docs(docs: List[Document]) -> VectorStore:
+    """Builds an in-memory TF-IDF VectorStore directly from a list of Document objects."""
+    chunks = chunk_pages(docs)
+    store = VectorStore()
+    store.build(chunks)
+    print(f"Knowledge base built from uploaded docs: {len(docs)} pages -> {len(chunks)} chunks.")
     return store
 
 

@@ -2,11 +2,13 @@
 api.py
 ======
 HTTP layer for KYC — Know Your Courses.
-Exposes the agentic RAG pipeline over JSON endpoints and serves the React GUI.
+Exposes the agentic RAG pipeline over JSON endpoints, supports custom course catalogue
+uploads, and serves the React GUI.
 """
 
 import os
 import sys
+import uuid
 
 # Ensure repository root is on sys.path
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -17,7 +19,11 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 from agentic_rag import agentic_answer
-from rag_system import build_store
+from rag_system import (
+    build_store,
+    load_knowledge_base_from_bytes,
+    build_store_from_docs,
+)
 
 GUI_DIST = os.path.join(_HERE, "gui", "dist")
 
@@ -30,16 +36,19 @@ CORS(app)
 
 PORT = int(os.environ.get("PORT", "5350"))
 
-_store = None
+_default_store = None
+_custom_stores = {}
 
 
-def get_store():
-    global _store
-    if _store is None:
-        print("Initializing knowledge base...")
-        _store = build_store()
+def get_store(session_id: str = None):
+    global _default_store
+    if session_id and session_id in _custom_stores:
+        return _custom_stores[session_id]["store"]
+    if _default_store is None:
+        print("Initializing default knowledge base...")
+        _default_store = build_store()
         print("Initialization complete.")
-    return _store
+    return _default_store
 
 
 @app.route("/health", methods=["GET"])
@@ -47,9 +56,70 @@ def get_store():
 @app.route("/api/index/health", methods=["GET"])
 @app.route("/api/index.py/health", methods=["GET"])
 def health():
-    """Lets the GUI show a live connection badge instead of failing blind."""
-    store = get_store()
-    return jsonify({"status": "ok", "chunks": len(store.chunks)})
+    """Lets the GUI show a live connection badge."""
+    session_id = request.args.get("session_id")
+    store = get_store(session_id)
+    catalogue_name = (
+        _custom_stores[session_id]["filename"]
+        if session_id and session_id in _custom_stores
+        else "JAGSoM PGDM 2025-27"
+    )
+    return jsonify(
+        {
+            "status": "ok",
+            "chunks": len(store.chunks),
+            "catalogue": catalogue_name,
+        }
+    )
+
+
+@app.route("/upload", methods=["POST"])
+@app.route("/api/upload", methods=["POST"])
+@app.route("/api/index/upload", methods=["POST"])
+@app.route("/api/index.py/upload", methods=["POST"])
+def upload():
+    """Accepts a custom Course Catalogue PDF upload and builds an in-memory RAG index."""
+    file = request.files.get("file")
+    if not file:
+        return jsonify({"error": "No file uploaded. Expected form field 'file'."}), 400
+
+    filename = file.filename or "uploaded_catalogue.pdf"
+    if not filename.lower().endswith(".pdf"):
+        return jsonify({"error": "Only PDF files are currently supported."}), 400
+
+    try:
+        file_bytes = file.read()
+        if not file_bytes:
+            return jsonify({"error": "Uploaded file is empty."}), 400
+
+        docs = load_knowledge_base_from_bytes(file_bytes, filename=filename)
+        if not docs:
+            return jsonify({"error": "No readable text could be extracted from this PDF."}), 400
+
+        custom_store = build_store_from_docs(docs)
+        session_id = str(uuid.uuid4())
+        _custom_stores[session_id] = {
+            "store": custom_store,
+            "filename": filename,
+            "pages": len(docs),
+            "chunks": len(custom_store.chunks),
+        }
+
+        print(f"Successfully processed {filename}: {len(docs)} pages, {len(custom_store.chunks)} chunks (Session: {session_id})")
+
+        return jsonify(
+            {
+                "status": "ok",
+                "session_id": session_id,
+                "filename": filename,
+                "pages": len(docs),
+                "chunks": len(custom_store.chunks),
+                "message": f"Successfully indexed {filename}",
+            }
+        )
+    except Exception as e:
+        print(f"Error processing catalogue upload: {e}")
+        return jsonify({"error": f"Failed to process PDF: {str(e)}"}), 500
 
 
 @app.route("/chat", methods=["POST"])
@@ -62,10 +132,11 @@ def chat():
         return jsonify({"error": "Missing 'message' field in JSON body"}), 400
 
     question = str(data["message"]).strip()
-    print(f"Received question: {question}")
+    session_id = data.get("session_id")
+    print(f"Received question: {question} (session: {session_id})")
 
     try:
-        store = get_store()
+        store = get_store(session_id)
         result = agentic_answer(store, question)
         return jsonify(
             {
@@ -93,8 +164,9 @@ def serve_gui(path=""):
             "status": "running",
             "message": "Frontend build not found. Run 'npm run build' inside gui/ to build the React UI.",
             "endpoints": {
-                "health": "GET /health",
-                "chat": "POST /chat",
+                "health": "GET /api/health",
+                "upload": "POST /api/upload",
+                "chat": "POST /api/chat",
             },
         }
     )
