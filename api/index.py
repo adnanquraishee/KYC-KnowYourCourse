@@ -142,6 +142,22 @@ def chat():
         return jsonify({"error": str(e)}), 500
 
 
+
+@app.route("/api/index.py", methods=["GET", "POST"])
+def vercel_catchall():
+    """
+    Vercel rewrites /api/:path* to /api/index.py?path=...
+    This catch-all parses the query parameter and routes to the correct function.
+    """
+    path = request.args.get("path", "")
+    if path == "health" or path == "":
+        return health()
+    elif path == "chat":
+        return chat()
+    elif path == "upload":
+        return upload_catalogue()
+    return jsonify({"error": "Not Found"}), 404
+
 @app.route("/", methods=["GET"])
 @app.route("/<path:path>", methods=["GET"])
 def serve_gui(path=""):
