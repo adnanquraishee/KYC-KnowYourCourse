@@ -2,27 +2,27 @@
   "buildCommand": "npm run build",
   "outputDirectory": "gui/dist",
   "functions": {
-    "api/index.py": {
-      "includeFiles": "catalogue_chunks.json,rag_system.py,agentic_rag.py,catalogue.pdf",
+    "api.py": {
+      "includeFiles": "{catalogue_chunks.json,catalogue.pdf}",
       "maxDuration": 60
     }
   },
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "/api/index.py"
+      "destination": "/api.py"
     },
     {
       "source": "/health",
-      "destination": "/api/index.py"
+      "destination": "/api.py"
     },
     {
       "source": "/chat",
-      "destination": "/api/index.py"
+      "destination": "/api.py"
     },
     {
       "source": "/upload",
-      "destination": "/api/index.py"
+      "destination": "/api.py"
     }
   ]
 }
