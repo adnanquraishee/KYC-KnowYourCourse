@@ -1,1 +1,1 @@
-# Marker for package api
+from api.index import app

@@ -2,7 +2,7 @@
 api.py
 ======
 HTTP layer for KYC — Know Your Courses.
-Exposes the agentic RAG pipeline over JSON endpoints.
+Exposes the agentic RAG pipeline over JSON endpoints and serves the React GUI.
 """
 
 import os
@@ -13,13 +13,19 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 from agentic_rag import agentic_answer
 from rag_system import build_store
 
-app = Flask(__name__)
+GUI_DIST = os.path.join(_HERE, "gui", "dist")
+
+app = Flask(
+    __name__,
+    static_folder=GUI_DIST if os.path.exists(GUI_DIST) else None,
+    static_url_path="",
+)
 CORS(app)
 
 PORT = int(os.environ.get("PORT", "5350"))
@@ -34,21 +40,6 @@ def get_store():
         _store = build_store()
         print("Initialization complete.")
     return _store
-
-
-@app.route("/", methods=["GET"])
-def root():
-    """Provides status information and links to the frontend GUI."""
-    return jsonify(
-        {
-            "name": "KYC — Know Your Courses API",
-            "status": "running",
-            "endpoints": {
-                "health": "GET /health",
-                "chat": "POST /chat",
-            },
-        }
-    )
 
 
 @app.route("/health", methods=["GET"])
@@ -82,6 +73,27 @@ def chat():
     except Exception as e:
         print(f"Error answering question: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/", methods=["GET"])
+@app.route("/<path:path>", methods=["GET"])
+def serve_gui(path=""):
+    """Serves the React GUI if built, or returns API status info if not built."""
+    if path and os.path.exists(os.path.join(GUI_DIST, path)):
+        return send_from_directory(GUI_DIST, path)
+    if os.path.exists(os.path.join(GUI_DIST, "index.html")):
+        return send_from_directory(GUI_DIST, "index.html")
+    return jsonify(
+        {
+            "name": "KYC — Know Your Courses API",
+            "status": "running",
+            "message": "Frontend build not found. Run 'npm run build' inside gui/ to build the React UI.",
+            "endpoints": {
+                "health": "GET /health",
+                "chat": "POST /chat",
+            },
+        }
+    )
 
 
 if __name__ == "__main__":
