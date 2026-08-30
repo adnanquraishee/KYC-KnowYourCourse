@@ -1,0 +1,9 @@
+{
+  "name": "kyc-know-your-course",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd gui && npm install && npm run build",
+    "dev": "npm --prefix gui run dev"
+  }
+}

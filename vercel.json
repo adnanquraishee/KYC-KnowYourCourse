@@ -1,6 +1,5 @@
 {
-  "version": 2,
-  "buildCommand": "cd gui && npm install && npm run build",
+  "buildCommand": "npm run build",
   "outputDirectory": "gui/dist",
   "functions": {
     "api/index.py": {
@@ -10,7 +9,7 @@
   },
   "rewrites": [
     {
-      "source": "/api/(.*)",
+      "source": "/api/:path*",
       "destination": "/api/index.py"
     },
     {
