@@ -1,6 +1,13 @@
 {
+  "version": 2,
   "buildCommand": "cd gui && npm install && npm run build",
   "outputDirectory": "gui/dist",
+  "functions": {
+    "api/index.py": {
+      "includeFiles": "catalogue_chunks.json",
+      "maxDuration": 60
+    }
+  },
   "rewrites": [
     {
       "source": "/health",
@@ -11,7 +18,7 @@
       "destination": "/api/index.py"
     },
     {
-      "source": "/api/:match*",
+      "source": "/api/(.*)",
       "destination": "/api/index.py"
     }
   ]

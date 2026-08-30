@@ -44,6 +44,8 @@ def get_store():
 
 @app.route("/health", methods=["GET"])
 @app.route("/api/health", methods=["GET"])
+@app.route("/api/index/health", methods=["GET"])
+@app.route("/api/index.py/health", methods=["GET"])
 def health():
     """Lets the GUI show a live connection badge instead of failing blind."""
     store = get_store()
@@ -52,6 +54,8 @@ def health():
 
 @app.route("/chat", methods=["POST"])
 @app.route("/api/chat", methods=["POST"])
+@app.route("/api/index/chat", methods=["POST"])
+@app.route("/api/index.py/chat", methods=["POST"])
 def chat():
     data = request.get_json(silent=True)
     if not data or not str(data.get("message", "")).strip():

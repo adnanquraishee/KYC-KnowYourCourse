@@ -33,6 +33,7 @@ does NOT contain any key. It reads GROQ_API_KEY from your environment
 ------------------------------------------------------------------------
 """
 
+import json
 import os
 import re
 from dataclasses import dataclass, field
@@ -63,6 +64,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 # Default to the catalogue that sits next to this file, so the script works
 # no matter which directory you launch it from.
 PDF_PATH = os.environ.get("KB_PDF_PATH", os.path.join(_HERE, "catalogue.pdf"))
+CHUNKS_JSON_PATH = os.environ.get("KB_CHUNKS_PATH", os.path.join(_HERE, "catalogue_chunks.json"))
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "qwen/qwen3.6-27b")
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_TIMEOUT = float(os.environ.get("GROQ_TIMEOUT", "60"))
@@ -350,6 +352,23 @@ def print_comparison(result: Dict) -> None:
 # Main
 # --------------------------------------------------------------------------
 def build_store(pdf_path: str = PDF_PATH) -> VectorStore:
+    # 1. Ultra-fast path: load pre-extracted JSON chunks if present
+    if os.path.exists(CHUNKS_JSON_PATH):
+        try:
+            with open(CHUNKS_JSON_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            chunks = [
+                Document(doc_id=d["doc_id"], text=d["text"], metadata=d.get("metadata", {}))
+                for d in data
+            ]
+            store = VectorStore()
+            store.build(chunks)
+            print(f"Knowledge base loaded from JSON: {len(chunks)} chunks.")
+            return store
+        except Exception as e:
+            print(f"Warning: Failed to load from JSON ({e}), falling back to PDF.")
+
+    # 2. Standard path: parse PDF
     docs = load_knowledge_base(pdf_path)
     chunks = chunk_pages(docs)
     store = VectorStore()
