@@ -3,7 +3,7 @@
   "outputDirectory": "gui/dist",
   "functions": {
     "api/index.py": {
-      "includeFiles": "catalogue_chunks.json",
+      "includeFiles": "catalogue_chunks.json,rag_system.py,agentic_rag.py,catalogue.pdf",
       "maxDuration": 60
     }
   },
