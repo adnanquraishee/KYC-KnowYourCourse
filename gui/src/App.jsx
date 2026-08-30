@@ -18,7 +18,7 @@ import FloatingGlyphs from './components/FloatingGlyphs';
 // immediately instead of waiting on the WebGL scene.
 const EduScene = lazy(() => import('./components/EduScene'));
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5350';
+const API_BASE = import.meta.env.VITE_API_BASE !== undefined ? import.meta.env.VITE_API_BASE : '';
 
 const SUGGESTIONS = [
   'What are the pre-requisites for Corporate Finance?',
