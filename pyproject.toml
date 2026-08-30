@@ -3,14 +3,9 @@ name = "kyc-know-your-course"
 version = "0.1.0"
 description = "KYC — Know Your Courses Agentic RAG assistant"
 dependencies = [
-    "pdfplumber",
-    "numpy",
-    "scikit-learn",
+    "pypdf",
     "requests",
     "python-dotenv",
     "flask",
     "flask-cors"
 ]
-
-[tool.vercel]
-entrypoint = "api:app"

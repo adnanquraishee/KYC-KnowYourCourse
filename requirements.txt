@@ -1,6 +1,4 @@
-pdfplumber
-numpy
-scikit-learn
+pypdf
 requests
 python-dotenv
 flask
